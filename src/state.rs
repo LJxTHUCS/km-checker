@@ -1,29 +1,55 @@
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use std::{collections::HashMap, hash::Hash};
 
-pub trait AbstractState {
+/// Common Kernel State Type. With matches function and serde support
+pub trait AbstractState: DeserializeOwned + Serialize {
     fn matches(&self, other: &Self) -> bool;
 }
 
-/// Ignored Fileds
+/// Not Checked Fileds
 #[derive(Debug)]
 pub struct Unmatched<T>(pub T);
 
-impl<T> AbstractState for Unmatched<T> {
+impl<'de, T> Deserialize<'de> for Unmatched<T>
+where
+    T: Default,
+{
+    fn deserialize<D>(_deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Unmatched(T::default()))
+    }
+}
+
+impl<T> Serialize for Unmatched<T>
+where
+    T: Default,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_none()
+    }
+}
+
+impl<'a, T> AbstractState for Unmatched<T>
+where
+    T: Default,
+{
     fn matches(&self, _other: &Self) -> bool {
         true
     }
 }
 
-/// Common Value
-#[derive(Deserialize, Debug)]
-pub struct Value<T>(pub T)
-where
-    T: PartialEq;
+/// Common Data Type, Checked for Equality
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct Value<T>(pub T);
 
-impl<T> AbstractState for Value<T>
+impl<'a, T> AbstractState for Value<T>
 where
-    T: PartialEq,
+    T: PartialEq + DeserializeOwned + Serialize,
 {
     /// Values match if they are equal
     fn matches(&self, other: &Self) -> bool {
@@ -32,14 +58,12 @@ where
 }
 
 /// Ordered List of Values
-#[derive(Deserialize, Debug)]
-pub struct ValueList<T>(pub Vec<Value<T>>)
-where
-    T: PartialEq;
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ValueList<T>(pub Vec<Value<T>>);
 
-impl<T> AbstractState for ValueList<T>
+impl<'a, T> AbstractState for ValueList<T>
 where
-    T: PartialEq,
+    T: PartialEq + DeserializeOwned + Serialize,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -50,14 +74,14 @@ where
 }
 
 /// Unordered Set of Values
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ValueSet<T>(pub Vec<Value<T>>)
 where
     T: PartialEq;
 
-impl<T> AbstractState for ValueSet<T>
+impl<'a, T> AbstractState for ValueSet<T>
 where
-    T: PartialEq,
+    T: PartialEq + DeserializeOwned + Serialize,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -67,11 +91,14 @@ where
     }
 }
 
-/// Common Identifier
-#[derive(Debug, Deserialize, Clone)]
+/// Common Identifier. Not checked for equality
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct Ident<T>(pub T);
 
-impl<T> AbstractState for Ident<T> {
+impl<'a, T> AbstractState for Ident<T>
+where
+    T: DeserializeOwned + Serialize,
+{
     /// Single Identifier always matches
     fn matches(&self, _other: &Self) -> bool {
         return true;
@@ -79,14 +106,14 @@ impl<T> AbstractState for Ident<T> {
 }
 
 /// Ordered List of Identifiers
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IdentList<T>(pub Vec<Ident<T>>)
 where
     T: Hash + Eq;
 
-impl<T> AbstractState for IdentList<T>
+impl<'a, T> AbstractState for IdentList<T>
 where
-    T: Hash + Eq,
+    T: Hash + Eq + DeserializeOwned + Serialize,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -97,14 +124,14 @@ where
 }
 
 /// Unordered Set of Identifiers
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct IdentSet<T>(pub Vec<Ident<T>>)
 where
     T: Hash + Eq;
 
-impl<T> AbstractState for IdentSet<T>
+impl<'a, T> AbstractState for IdentSet<T>
 where
-    T: Hash + Eq,
+    T: Hash + Eq + DeserializeOwned + Serialize,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
