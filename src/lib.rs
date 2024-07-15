@@ -4,6 +4,7 @@ mod kernel;
 mod runner;
 mod state;
 
+pub use error::*;
 pub use event::*;
 pub use kernel::*;
 pub use runner::*;
@@ -37,27 +38,30 @@ mod test {
     struct Spawn;
 
     impl Event<EasyState> for Spawn {
-        fn apply(&self, state: &mut EasyState) {
+        fn apply(&self, state: &mut EasyState) -> Result<()> {
             state.tasks.0.push(Ident(state.control.0.next_task));
             state.control.0.next_task += 1;
+            Ok(())
         }
     }
 
     struct Sched;
 
     impl Event<EasyState> for Sched {
-        fn apply(&self, state: &mut EasyState) {
+        fn apply(&self, state: &mut EasyState) -> Result<()> {
             let head = state.tasks.0[0];
             state.tasks.0.remove(0);
             state.tasks.0.push(head);
+            Ok(())
         }
     }
 
     struct Exit;
 
     impl Event<EasyState> for Exit {
-        fn apply(&self, state: &mut EasyState) {
+        fn apply(&self, state: &mut EasyState) -> Result<()> {
             state.tasks.0.pop();
+            Ok(())
         }
     }
 
@@ -84,8 +88,8 @@ mod test {
             "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "sched", "exit",
         ];
         for op in ops {
-            kernel0.step(op);
-            kernel1.step(op);
+            kernel0.step(op).expect("kernel0.step failed");
+            kernel1.step(op).expect("kernel1.step failed");
             assert!(kernel0.state.matches(&kernel1.state));
             println!("[0]{}: {:?}", op, kernel0.state);
             println!("[1]{}: {:?}", op, kernel1.state);
@@ -95,45 +99,48 @@ mod test {
     struct RoundIn(usize);
 
     impl Commander for RoundIn {
-        fn command(&mut self) -> String {
+        fn command(&mut self) -> Result<String> {
             let ops = vec![
                 "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "exit",
                 "exit",
             ];
             let res = ops[(self.0) % ops.len()].to_string();
             self.0 += 1;
-            res
+            Ok(res)
         }
     }
 
     struct Stdout;
 
     impl Printer<EasyState> for Stdout {
-        fn print_str(&mut self, s: &str) {
+        fn print_str(&mut self, s: &str) -> Result<()> {
             println!("{}", s);
+            Ok(())
         }
-        fn print_state(&mut self, s: &EasyState) {
-            let sta_str = serde_json::to_string(&s).unwrap();
+        fn print_state(&mut self, s: &EasyState) -> Result<()> {
+            let sta_str =
+                serde_json::to_string(&s).map_err(|_| Error::new(ErrorKind::SerdeError))?;
             println!("{}", sta_str);
+            Ok(())
         }
     }
 
     struct FakeTestPort(Kernel<EasyState>);
 
     impl TestPort<EasyState> for FakeTestPort {
-        fn send(&mut self, event: &str) {
+        fn send(&mut self, event: &str) -> Result<()> {
             // Random error
-            if rand::random::<u64>() % 100 == 0 {
-                return;
-            }
-            self.0.step(event);
+            // if rand::random::<u64>() % 100 == 0 {
+            //     return;
+            // }
+            self.0.step(event)
         }
-        fn receive(&mut self) -> &EasyState {
-            let sta_str = serde_json::to_string(&self.0.state).unwrap();
-            println!("Received: {}", sta_str);
-            let sta = serde_json::from_str::<EasyState>(&sta_str).unwrap();
-            self.0.state = sta;
-            &self.0.state
+        fn receive(&mut self) -> Result<&EasyState> {
+            let sta_str = serde_json::to_string(&self.0.state)
+                .map_err(|_| Error::new(ErrorKind::SerdeError))?;
+            let _sta = serde_json::from_str::<EasyState>(&sta_str)
+                .map_err(|_| Error::new(ErrorKind::SerdeError))?;
+            Ok(&self.0.state)
         }
     }
 

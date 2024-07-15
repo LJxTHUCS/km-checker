@@ -1,23 +1,26 @@
-use crate::{error::Error, AbstractState, Kernel};
+use crate::{
+    error::{Error, ErrorKind, Result},
+    AbstractState, Kernel,
+};
 
 pub trait Commander {
-    fn command(&mut self) -> String;
+    fn command(&mut self) -> Result<String>;
 }
 
 pub trait Printer<S>
 where
     S: AbstractState,
 {
-    fn print_str(&mut self, s: &str);
-    fn print_state(&mut self, s: &S);
+    fn print_str(&mut self, s: &str) -> Result<()>;
+    fn print_state(&mut self, s: &S) -> Result<()>;
 }
 
 pub trait TestPort<S>
 where
     S: AbstractState,
 {
-    fn send(&mut self, event: &str);
-    fn receive(&mut self) -> &S;
+    fn send(&mut self, event: &str) -> Result<()>;
+    fn receive(&mut self) -> Result<&S>;
 }
 pub struct Runner<C, P, T, S>
 where
@@ -47,19 +50,20 @@ where
             kernel,
         }
     }
-    pub fn step(&mut self) -> Result<(), Error> {
-        let event = self.commander.command();
+    pub fn step(&mut self) -> Result<()> {
+        let event = self.commander.command()?;
         // Send command to test port
-        self.test_port.send(&event);
+        self.test_port.send(&event)?;
         // Execute command in kernel model
-        self.kernel.step(&event);
+        self.kernel.step(&event)?;
         // Receive state from test port
-        let res = self.test_port.receive();
+        let res = self.test_port.receive()?;
         // Compare state
+        self.printer.print_state(&res)?;
+        self.printer.print_state(&self.kernel.state)?;
         if !res.matches(&self.kernel.state) {
-            return Err(Error::StateMismatch);
+            return Err(Error::new(ErrorKind::StateMismatch));
         }
-        self.printer.print_state(&self.kernel.state);
         Ok(())
     }
 }
