@@ -1,4 +1,4 @@
-use crate::{AbstractState, Kernel};
+use crate::{error::Error, AbstractState, Kernel};
 
 pub trait Commander {
     fn command(&mut self) -> String;
@@ -43,7 +43,7 @@ where
             kernel,
         }
     }
-    pub fn step(&mut self) -> Result<(), String> {
+    pub fn step(&mut self) -> Result<(), Error> {
         let event = self.commander.command();
         // Send command to test port
         self.test_port.send(&event);
@@ -53,11 +53,7 @@ where
         let res = self.test_port.receive();
         // Compare state
         if !res.matches(&self.kernel.state) {
-            return Err(format!(
-                "State mismatch: expected {:?}, got {:?}",
-                serde_json::to_string(&self.kernel.state).unwrap(),
-                serde_json::to_string(&res).unwrap()
-            ));
+            return Err(Error::StateMismatch);
         }
         let output = format!("{:?}", serde_json::to_string(&self.kernel.state).unwrap());
         self.printer.write(&output);

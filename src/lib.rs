@@ -12,7 +12,7 @@ pub use state::*;
 #[cfg(test)]
 mod test {
     use crate::*;
-    use runner::{Runner, Commander, Printer};
+    use runner::{Commander, Printer, Runner};
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Deserialize, Default)]
