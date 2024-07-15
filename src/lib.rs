@@ -12,7 +12,7 @@ pub use state::*;
 #[cfg(test)]
 mod test {
     use crate::*;
-    use runner::{Runner, RunnerInput, RunnerOutput};
+    use runner::{Runner, Commander, Printer};
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Deserialize, Default)]
@@ -93,8 +93,8 @@ mod test {
 
     struct RoundIn(usize);
 
-    impl RunnerInput for RoundIn {
-        fn read(&mut self) -> String {
+    impl Commander for RoundIn {
+        fn command(&mut self) -> String {
             let ops = vec![
                 "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "exit",
                 "exit",
@@ -107,9 +107,24 @@ mod test {
 
     struct Stdout;
 
-    impl RunnerOutput for Stdout {
+    impl Printer for Stdout {
         fn write(&mut self, s: &str) {
             println!("{}", s);
+        }
+    }
+
+    struct FakeTestPort(Kernel<EasyState>);
+
+    impl TestPort<EasyState> for FakeTestPort {
+        fn send(&mut self, event: &str) {
+            // Random error
+            if rand::random::<u64>() % 100 == 0 {
+                return;
+            }
+            self.0.step(event);
+        }
+        fn receive(&mut self) -> &EasyState {
+            &self.0.state
         }
     }
 
@@ -119,14 +134,23 @@ mod test {
             tasks: IdentList(vec![Ident(0)]),
             control: Unmatched(EasyControlInfo { next_task: 1 }),
         };
+        let state1 = EasyState {
+            tasks: IdentList(vec![Ident(100)]),
+            control: Unmatched(EasyControlInfo { next_task: 101 }),
+        };
         let mut kernel0 = Kernel::new(state0);
         kernel0.register("spawn", Box::new(Spawn));
         kernel0.register("sched", Box::new(Sched));
         kernel0.register("exit", Box::new(Exit));
-        let mut runner = Runner::new(RoundIn(0), Stdout, kernel0);
+        let mut kernel1 = Kernel::new(state1);
+        kernel1.register("spawn", Box::new(Spawn));
+        kernel1.register("sched", Box::new(Sched));
+        kernel1.register("exit", Box::new(Exit));
+
+        let mut runner = Runner::new(RoundIn(0), Stdout, FakeTestPort(kernel1), kernel0);
         for _ in 0..1000 {
             println!("=====================================");
-            runner.step();
+            runner.step().expect("Runner Exited");
         }
     }
 }
