@@ -4,8 +4,12 @@ pub trait Commander {
     fn command(&mut self) -> String;
 }
 
-pub trait Printer {
-    fn write(&mut self, s: &str);
+pub trait Printer<S>
+where
+    S: AbstractState,
+{
+    fn print_str(&mut self, s: &str);
+    fn print_state(&mut self, s: &S);
 }
 
 pub trait TestPort<S>
@@ -18,7 +22,7 @@ where
 pub struct Runner<C, P, T, S>
 where
     C: Commander,
-    P: Printer,
+    P: Printer<S>,
     T: TestPort<S>,
     S: AbstractState,
 {
@@ -31,7 +35,7 @@ where
 impl<C, P, T, S> Runner<C, P, T, S>
 where
     C: Commander,
-    P: Printer,
+    P: Printer<S>,
     T: TestPort<S>,
     S: AbstractState,
 {
@@ -55,8 +59,7 @@ where
         if !res.matches(&self.kernel.state) {
             return Err(Error::StateMismatch);
         }
-        let output = format!("{:?}", serde_json::to_string(&self.kernel.state).unwrap());
-        self.printer.write(&output);
+        self.printer.print_state(&self.kernel.state);
         Ok(())
     }
 }

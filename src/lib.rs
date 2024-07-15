@@ -23,13 +23,14 @@ mod test {
     #[derive(Debug, Deserialize, Serialize)]
     struct EasyState {
         tasks: IdentList<usize>,
+        #[serde(skip_serializing)]
         control: Unmatched<EasyControlInfo>,
     }
 
     // TODO: derive macro
     impl AbstractState for EasyState {
         fn matches(&self, other: &Self) -> bool {
-            self.tasks.matches(&other.tasks) && self.control.matches(&other.control)
+            self.tasks.matches(&other.tasks)
         }
     }
 
@@ -107,9 +108,13 @@ mod test {
 
     struct Stdout;
 
-    impl Printer for Stdout {
-        fn write(&mut self, s: &str) {
+    impl Printer<EasyState> for Stdout {
+        fn print_str(&mut self, s: &str) {
             println!("{}", s);
+        }
+        fn print_state(&mut self, s: &EasyState) {
+            let sta_str = serde_json::to_string(&s).unwrap();
+            println!("{}", sta_str);
         }
     }
 
@@ -124,6 +129,10 @@ mod test {
             self.0.step(event);
         }
         fn receive(&mut self) -> &EasyState {
+            let sta_str = serde_json::to_string(&self.0.state).unwrap();
+            println!("Received: {}", sta_str);
+            let sta = serde_json::from_str::<EasyState>(&sta_str).unwrap();
+            self.0.state = sta;
             &self.0.state
         }
     }

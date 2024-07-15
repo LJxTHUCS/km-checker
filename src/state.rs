@@ -1,8 +1,8 @@
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
-use std::{collections::HashMap, hash::Hash};
+use serde::{Deserialize, Deserializer, Serialize};
+use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 /// Common Kernel State Type. With matches function and serde support
-pub trait AbstractState: DeserializeOwned + Serialize {
+pub trait AbstractState {
     fn matches(&self, other: &Self) -> bool;
 }
 
@@ -22,22 +22,7 @@ where
     }
 }
 
-impl<T> Serialize for Unmatched<T>
-where
-    T: Default,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_none()
-    }
-}
-
-impl<'a, T> AbstractState for Unmatched<T>
-where
-    T: Default,
-{
+impl<T> AbstractState for Unmatched<T> {
     fn matches(&self, _other: &Self) -> bool {
         true
     }
@@ -49,7 +34,7 @@ pub struct Value<T>(pub T);
 
 impl<'a, T> AbstractState for Value<T>
 where
-    T: PartialEq + DeserializeOwned + Serialize,
+    T: PartialEq,
 {
     /// Values match if they are equal
     fn matches(&self, other: &Self) -> bool {
@@ -63,7 +48,7 @@ pub struct ValueList<T>(pub Vec<Value<T>>);
 
 impl<'a, T> AbstractState for ValueList<T>
 where
-    T: PartialEq + DeserializeOwned + Serialize,
+    T: PartialEq,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -81,7 +66,7 @@ where
 
 impl<'a, T> AbstractState for ValueSet<T>
 where
-    T: PartialEq + DeserializeOwned + Serialize,
+    T: PartialEq,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -95,10 +80,7 @@ where
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct Ident<T>(pub T);
 
-impl<'a, T> AbstractState for Ident<T>
-where
-    T: DeserializeOwned + Serialize,
-{
+impl<'a, T> AbstractState for Ident<T> {
     /// Single Identifier always matches
     fn matches(&self, _other: &Self) -> bool {
         return true;
@@ -113,7 +95,7 @@ where
 
 impl<'a, T> AbstractState for IdentList<T>
 where
-    T: Hash + Eq + DeserializeOwned + Serialize,
+    T: Hash + Eq,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
@@ -131,7 +113,7 @@ where
 
 impl<'a, T> AbstractState for IdentSet<T>
 where
-    T: Hash + Eq + DeserializeOwned + Serialize,
+    T: Hash + Eq,
 {
     fn matches(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
