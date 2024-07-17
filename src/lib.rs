@@ -10,6 +10,9 @@ pub use kernel::*;
 pub use runner::*;
 pub use state::*;
 
+#[cfg(feature = "derive")]
+pub use derive::*;
+
 #[cfg(test)]
 mod test {
     use crate::*;
@@ -21,18 +24,11 @@ mod test {
         next_task: usize,
     }
 
-    #[derive(Debug, Deserialize, Serialize)]
+    #[derive(Debug, Deserialize, Serialize, AbstractState)]
     struct EasyState {
         tasks: IdentList<usize>,
         #[serde(skip_serializing)]
         control: Ignored<EasyControlInfo>,
-    }
-
-    // TODO: derive macro
-    impl AbstractState for EasyState {
-        fn matches(&self, other: &Self) -> bool {
-            self.tasks.matches(&other.tasks)
-        }
     }
 
     struct Spawn;

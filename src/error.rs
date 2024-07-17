@@ -2,6 +2,7 @@
 pub enum ErrorKind {
     StateParseError,
     EventNotFound,
+    EventFailed,
     StateMismatch,
     IOError,
 }
