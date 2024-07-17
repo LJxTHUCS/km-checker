@@ -25,7 +25,7 @@ mod test {
     struct EasyState {
         tasks: IdentList<usize>,
         #[serde(skip_serializing)]
-        control: Unmatched<EasyControlInfo>,
+        control: Ignored<EasyControlInfo>,
     }
 
     // TODO: derive macro
@@ -39,7 +39,7 @@ mod test {
 
     impl Event<EasyState> for Spawn {
         fn apply(&self, state: &mut EasyState) -> Result<()> {
-            state.tasks.0.push(Ident(state.control.0.next_task));
+            state.tasks.0.push(state.control.0.next_task);
             state.control.0.next_task += 1;
             Ok(())
         }
@@ -68,12 +68,12 @@ mod test {
     #[test]
     fn test() {
         let state0 = EasyState {
-            tasks: IdentList(vec![Ident(0)]),
-            control: Unmatched(EasyControlInfo { next_task: 1 }),
+            tasks: IdentList(vec![0]),
+            control: Ignored(EasyControlInfo { next_task: 1 }),
         };
         let state1 = EasyState {
-            tasks: IdentList(vec![Ident(100)]),
-            control: Unmatched(EasyControlInfo { next_task: 101 }),
+            tasks: IdentList(vec![100]),
+            control: Ignored(EasyControlInfo { next_task: 101 }),
         };
         let mut kernel0 = Kernel::new(state0);
         kernel0.register("spawn", Box::new(Spawn));
@@ -119,7 +119,7 @@ mod test {
         }
         fn print_state(&mut self, s: &EasyState) -> Result<()> {
             let sta_str =
-                serde_json::to_string(&s).map_err(|_| Error::new(ErrorKind::SerdeError))?;
+                serde_json::to_string(&s).map_err(|_| Error::new(ErrorKind::StateParseError))?;
             println!("{}", sta_str);
             Ok(())
         }
@@ -137,9 +137,9 @@ mod test {
         }
         fn receive(&mut self) -> Result<&EasyState> {
             let sta_str = serde_json::to_string(&self.0.state)
-                .map_err(|_| Error::new(ErrorKind::SerdeError))?;
+                .map_err(|_| Error::new(ErrorKind::StateParseError))?;
             let _sta = serde_json::from_str::<EasyState>(&sta_str)
-                .map_err(|_| Error::new(ErrorKind::SerdeError))?;
+                .map_err(|_| Error::new(ErrorKind::StateParseError))?;
             Ok(&self.0.state)
         }
     }
@@ -147,12 +147,12 @@ mod test {
     #[test]
     fn test_runner() {
         let state0 = EasyState {
-            tasks: IdentList(vec![Ident(0)]),
-            control: Unmatched(EasyControlInfo { next_task: 1 }),
+            tasks: IdentList(vec![0]),
+            control: Ignored(EasyControlInfo { next_task: 1 }),
         };
         let state1 = EasyState {
-            tasks: IdentList(vec![Ident(100)]),
-            control: Unmatched(EasyControlInfo { next_task: 101 }),
+            tasks: IdentList(vec![100]),
+            control: Ignored(EasyControlInfo { next_task: 101 }),
         };
         let mut kernel0 = Kernel::new(state0);
         kernel0.register("spawn", Box::new(Spawn));

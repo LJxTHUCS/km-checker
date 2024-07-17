@@ -1,8 +1,9 @@
 #[derive(Debug)]
 pub enum ErrorKind {
-    SerdeError,
+    StateParseError,
     EventNotFound,
     StateMismatch,
+    IOError,
 }
 
 #[derive(Debug)]
