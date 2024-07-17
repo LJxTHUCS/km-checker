@@ -22,6 +22,9 @@ where
 }
 
 impl<T> Interval<T> {
+    pub fn new(left: usize, right: usize, value: T) -> Self {
+        Self { left, right, value }
+    }
     pub fn overlaps(&self, other: &Self) -> bool {
         self.left <= other.right && self.right >= other.left
     }

@@ -1,8 +1,8 @@
 #[derive(Debug)]
 pub enum ErrorKind {
     StateParseError,
-    EventNotFound,
-    EventFailed,
+    CommandNotFound,
+    ExecutionFailed,
     StateMismatch,
     IOError,
 }

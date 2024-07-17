@@ -1,12 +1,10 @@
+mod command;
 mod error;
-mod event;
-mod kernel;
 mod runner;
 mod state;
 
+pub use command::*;
 pub use error::*;
-pub use event::*;
-pub use kernel::*;
 pub use runner::*;
 pub use state::*;
 
@@ -33,76 +31,59 @@ mod test {
 
     struct Spawn;
 
-    impl Event<EasyState> for Spawn {
-        fn apply(&self, state: &mut EasyState) -> Result<()> {
+    impl Command<EasyState> for Spawn {
+        fn execute(&self, state: &mut EasyState) -> Result<()> {
             state.tasks.0.push(state.control.0.next_task);
             state.control.0.next_task += 1;
             Ok(())
+        }
+        fn stringify(&self) -> String {
+            "spawn".to_string()
         }
     }
 
     struct Sched;
 
-    impl Event<EasyState> for Sched {
-        fn apply(&self, state: &mut EasyState) -> Result<()> {
+    impl Command<EasyState> for Sched {
+        fn execute(&self, state: &mut EasyState) -> Result<()> {
             let head = state.tasks.0[0];
             state.tasks.0.remove(0);
             state.tasks.0.push(head);
             Ok(())
         }
+        fn stringify(&self) -> String {
+            "sched".to_string()
+        }
     }
 
     struct Exit;
 
-    impl Event<EasyState> for Exit {
-        fn apply(&self, state: &mut EasyState) -> Result<()> {
+    impl Command<EasyState> for Exit {
+        fn execute(&self, state: &mut EasyState) -> Result<()> {
             state.tasks.0.pop();
             Ok(())
         }
-    }
-
-    #[test]
-    fn test() {
-        let state0 = EasyState {
-            tasks: IdentList(vec![0]),
-            control: Ignored(EasyControlInfo { next_task: 1 }),
-        };
-        let state1 = EasyState {
-            tasks: IdentList(vec![100]),
-            control: Ignored(EasyControlInfo { next_task: 101 }),
-        };
-        let mut kernel0 = Kernel::new(state0);
-        kernel0.register("spawn", Box::new(Spawn));
-        kernel0.register("sched", Box::new(Sched));
-        kernel0.register("exit", Box::new(Exit));
-        let mut kernel1 = Kernel::new(state1);
-        kernel1.register("spawn", Box::new(Spawn));
-        kernel1.register("sched", Box::new(Sched));
-        kernel1.register("exit", Box::new(Exit));
-
-        let ops = vec![
-            "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "sched", "exit",
-        ];
-        for op in ops {
-            kernel0.step(op).expect("kernel0.step failed");
-            kernel1.step(op).expect("kernel1.step failed");
-            assert!(kernel0.state.matches(&kernel1.state));
-            println!("[0]{}: {:?}", op, kernel0.state);
-            println!("[1]{}: {:?}", op, kernel1.state);
+        fn stringify(&self) -> String {
+            "exit".to_string()
         }
     }
 
     struct RoundIn(usize);
 
-    impl Commander for RoundIn {
-        fn command(&mut self) -> Result<String> {
+    impl Commander<EasyState> for RoundIn {
+        fn command(&mut self) -> Result<Box<dyn Command<EasyState>>> {
             let ops = vec![
                 "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "exit",
                 "exit",
             ];
             let res = ops[(self.0) % ops.len()].to_string();
             self.0 += 1;
-            Ok(res)
+            match res.as_str() {
+                "spawn" => Ok(Box::new(Spawn)),
+                "sched" => Ok(Box::new(Sched)),
+                "exit" => Ok(Box::new(Exit)),
+                _ => Err(Error::new(ErrorKind::CommandNotFound)),
+            }
         }
     }
 
@@ -121,22 +102,24 @@ mod test {
         }
     }
 
-    struct FakeTestPort(Kernel<EasyState>);
+    struct FakeTestPort(EasyState);
 
     impl TestPort<EasyState> for FakeTestPort {
-        fn send(&mut self, event: &str) -> Result<()> {
-            // Random error
-            // if rand::random::<u64>() % 100 == 0 {
-            //     return;
-            // }
-            self.0.step(event)
+        fn send(&mut self, command: &str) -> Result<()> {
+            let command: Box<dyn Command<EasyState>> = match command {
+                "spawn" => Box::new(Spawn),
+                "sched" => Box::new(Sched),
+                "exit" => Box::new(Exit),
+                _ => return Err(Error::new(ErrorKind::CommandNotFound)),
+            };
+            command.execute(&mut self.0)
         }
         fn receive(&mut self) -> Result<&EasyState> {
-            let sta_str = serde_json::to_string(&self.0.state)
+            let sta_str = serde_json::to_string(&self.0)
                 .map_err(|_| Error::new(ErrorKind::StateParseError))?;
             let _sta = serde_json::from_str::<EasyState>(&sta_str)
                 .map_err(|_| Error::new(ErrorKind::StateParseError))?;
-            Ok(&self.0.state)
+            Ok(&self.0)
         }
     }
 
@@ -150,16 +133,7 @@ mod test {
             tasks: IdentList(vec![100]),
             control: Ignored(EasyControlInfo { next_task: 101 }),
         };
-        let mut kernel0 = Kernel::new(state0);
-        kernel0.register("spawn", Box::new(Spawn));
-        kernel0.register("sched", Box::new(Sched));
-        kernel0.register("exit", Box::new(Exit));
-        let mut kernel1 = Kernel::new(state1);
-        kernel1.register("spawn", Box::new(Spawn));
-        kernel1.register("sched", Box::new(Sched));
-        kernel1.register("exit", Box::new(Exit));
-
-        let mut runner = Runner::new(RoundIn(0), Stdout, FakeTestPort(kernel1), kernel0);
+        let mut runner = Runner::new(RoundIn(0), Stdout, FakeTestPort(state1), state0);
         for _ in 0..1000 {
             println!("=====================================");
             runner.step().expect("Runner Exited");

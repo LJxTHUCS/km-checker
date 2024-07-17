@@ -1,10 +1,13 @@
 use crate::{
     error::{Error, ErrorKind, Result},
-    AbstractState, Kernel,
+    AbstractState, Command,
 };
 
-pub trait Commander {
-    fn command(&mut self) -> Result<String>;
+pub trait Commander<S>
+where
+    S: AbstractState,
+{
+    fn command(&mut self) -> Result<Box<dyn Command<S>>>;
 }
 
 pub trait Printer<S>
@@ -19,12 +22,12 @@ pub trait TestPort<S>
 where
     S: AbstractState,
 {
-    fn send(&mut self, event: &str) -> Result<()>;
+    fn send(&mut self, command: &str) -> Result<()>;
     fn receive(&mut self) -> Result<&S>;
 }
 pub struct Runner<C, P, T, S>
 where
-    C: Commander,
+    C: Commander<S>,
     P: Printer<S>,
     T: TestPort<S>,
     S: AbstractState,
@@ -32,36 +35,46 @@ where
     commander: C,
     printer: P,
     test_port: T,
-    kernel: Kernel<S>,
+    state: S,
 }
 
 impl<C, P, T, S> Runner<C, P, T, S>
 where
-    C: Commander,
+    C: Commander<S>,
     P: Printer<S>,
     T: TestPort<S>,
     S: AbstractState,
 {
-    pub fn new(commander: C, printer: P, test_port: T, kernel: Kernel<S>) -> Self {
+    pub fn new(commander: C, printer: P, test_port: T, state: S) -> Self {
         Self {
             commander,
             printer,
             test_port,
-            kernel,
+            state,
         }
     }
+    
+    /// Run a single step of model checking.
+    ///
+    /// 1. Get command from commander
+    /// 2. Send command to test port
+    /// 3. Execute command on abstract state
+    /// 4. Receive result from test port
+    /// 5. Compare results
+    ///
+    /// Returns `StateMismatch` if a discrepancy is found.
     pub fn step(&mut self) -> Result<()> {
-        let event = self.commander.command()?;
+        let command = self.commander.command()?;
         // Send command to test port
-        self.test_port.send(&event)?;
+        self.test_port.send(&command.stringify())?;
         // Execute command in kernel model
-        self.kernel.step(&event)?;
+        command.execute(&mut self.state)?;
         // Receive state from test port
         let res = self.test_port.receive()?;
         // Compare state
         self.printer.print_state(&res)?;
-        self.printer.print_state(&self.kernel.state)?;
-        if !res.matches(&self.kernel.state) {
+        self.printer.print_state(&self.state)?;
+        if !res.matches(&self.state) {
             return Err(Error::new(ErrorKind::StateMismatch));
         }
         Ok(())
