@@ -15,17 +15,15 @@ pub use derive::*;
 mod test {
     use crate::*;
     use runner::{Commander, Printer, Runner};
-    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug, Deserialize, Default)]
+    #[derive(Debug, Default)]
     struct EasyControlInfo {
         next_task: usize,
     }
 
-    #[derive(Debug, Deserialize, Serialize, AbstractState)]
+    #[derive(Debug, AbstractState)]
     struct EasyState {
         tasks: IdentList<usize>,
-        #[serde(skip_serializing)]
         control: Ignored<EasyControlInfo>,
     }
 
@@ -95,9 +93,7 @@ mod test {
             Ok(())
         }
         fn print_state(&mut self, s: &EasyState) -> Result<()> {
-            let sta_str =
-                serde_json::to_string(&s).map_err(|_| Error::new(ErrorKind::StateParseError))?;
-            println!("{}", sta_str);
+            println!("{:?}", s);
             Ok(())
         }
     }
@@ -108,12 +104,11 @@ mod test {
         fn send(&mut self, command: &dyn Command<EasyState>) -> Result<()> {
             command.execute(&mut self.0).map(|_| ())
         }
-        fn receive(&mut self) -> Result<&EasyState> {
-            let sta_str = serde_json::to_string(&self.0)
-                .map_err(|_| Error::new(ErrorKind::StateParseError))?;
-            let _sta = serde_json::from_str::<EasyState>(&sta_str)
-                .map_err(|_| Error::new(ErrorKind::StateParseError))?;
+        fn receive_state(&mut self) -> Result<&EasyState> {
             Ok(&self.0)
+        }
+        fn receive_retv(&mut self) -> Result<usize> {
+            Ok(0)
         }
     }
 
@@ -130,7 +125,7 @@ mod test {
         let mut runner = Runner::new(RoundIn(0), Stdout, FakeTestPort(state1), state0);
         for _ in 0..1000 {
             println!("=====================================");
-            runner.step().expect("Runner Exited");
+            runner.step(true, true).expect("Runner Exited");
         }
     }
 }

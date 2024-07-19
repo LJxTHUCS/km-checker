@@ -3,6 +3,7 @@ pub enum ErrorKind {
     StateParseError,
     CommandNotFound,
     ExecutionFailed,
+    ReturnValueMismatch,
     StateMismatch,
     InvalidInput,
     IOError,

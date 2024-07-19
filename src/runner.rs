@@ -7,6 +7,7 @@ pub trait Commander<S>
 where
     S: AbstractState,
 {
+    /// Get the next command to execute.
     fn command(&mut self) -> Result<Box<dyn Command<S>>>;
 }
 
@@ -14,7 +15,9 @@ pub trait Printer<S>
 where
     S: AbstractState,
 {
+    /// Print an info string to the output.
     fn print_str(&mut self, s: &str) -> Result<()>;
+    /// Print the current state.
     fn print_state(&mut self, s: &S) -> Result<()>;
 }
 
@@ -22,8 +25,12 @@ pub trait TestPort<S>
 where
     S: AbstractState,
 {
+    /// Send a command to the test target.
     fn send(&mut self, command: &dyn Command<S>) -> Result<()>;
-    fn receive(&mut self) -> Result<&S>;
+    /// Receive the return value from the test target.
+    fn receive_retv(&mut self) -> Result<usize>;
+    /// Receive current state from the test target.
+    fn receive_state(&mut self) -> Result<&S>;
 }
 pub struct Runner<C, P, T, S>
 where
@@ -59,24 +66,44 @@ where
     /// 1. Get command from commander
     /// 2. Send command to test port
     /// 3. Execute command on abstract state
-    /// 4. Receive result from test port
-    /// 5. Compare results
+    /// 4. Check return value (if enabled)
+    /// 5. Check state (if enabled)
     ///
-    /// Returns `StateMismatch` if a discrepancy is found.
-    pub fn step(&mut self) -> Result<()> {
+    /// `ReturnValueMismatch` if return value discrepancy is found.
+    /// `StateMismatch` if state discrepancy is found.
+    pub fn step(&mut self, check_retv: bool, check_state: bool) -> Result<()> {
+        // Get command from commander
         let command = self.commander.command()?;
-        self.printer.print_str(&command.stringify())?;
+        self.printer
+            .print_str(&format!("[command]: {}", command.stringify()))?;
+
         // Send command to test port
         self.test_port.send(command.as_ref())?;
         // Execute command in kernel model
-        command.execute(&mut self.state)?;
-        // Receive state from test port
-        let res = self.test_port.receive()?;
-        // Compare state
-        self.printer.print_state(&res)?;
-        self.printer.print_state(&self.state)?;
-        if !res.matches(&self.state) {
-            return Err(Error::new(ErrorKind::StateMismatch));
+        let model_ret = command.execute(&mut self.state)?;
+
+        // Check return value
+        if check_retv {
+            let test_ret = self.test_port.receive_retv()?;
+            self.printer
+                .print_str(&format!("[test retv]: {}", test_ret))?;
+            self.printer
+                .print_str(&format!("[model retv]: {}", model_ret))?;
+            if test_ret != model_ret {
+                return Err(Error::new(ErrorKind::ReturnValueMismatch));
+            }
+        }
+
+        // Check state
+        if check_state {
+            let test_state = self.test_port.receive_state()?;
+            self.printer.print_str("[test state]: ")?;
+            self.printer.print_state(test_state)?;
+            self.printer.print_str("[model state]: ")?;
+            self.printer.print_state(&self.state)?;
+            if !test_state.matches(&self.state) {
+                return Err(Error::new(ErrorKind::StateMismatch));
+            }
         }
         Ok(())
     }
