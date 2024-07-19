@@ -32,10 +32,10 @@ mod test {
     struct Spawn;
 
     impl Command<EasyState> for Spawn {
-        fn execute(&self, state: &mut EasyState) -> Result<()> {
+        fn execute(&self, state: &mut EasyState) -> Result<usize> {
             state.tasks.0.push(state.control.0.next_task);
             state.control.0.next_task += 1;
-            Ok(())
+            Ok(0)
         }
         fn stringify(&self) -> String {
             "spawn".to_string()
@@ -45,11 +45,11 @@ mod test {
     struct Sched;
 
     impl Command<EasyState> for Sched {
-        fn execute(&self, state: &mut EasyState) -> Result<()> {
+        fn execute(&self, state: &mut EasyState) -> Result<usize> {
             let head = state.tasks.0[0];
             state.tasks.0.remove(0);
             state.tasks.0.push(head);
-            Ok(())
+            Ok(0)
         }
         fn stringify(&self) -> String {
             "sched".to_string()
@@ -59,9 +59,9 @@ mod test {
     struct Exit;
 
     impl Command<EasyState> for Exit {
-        fn execute(&self, state: &mut EasyState) -> Result<()> {
+        fn execute(&self, state: &mut EasyState) -> Result<usize> {
             state.tasks.0.pop();
-            Ok(())
+            Ok(0)
         }
         fn stringify(&self) -> String {
             "exit".to_string()
@@ -105,14 +105,8 @@ mod test {
     struct FakeTestPort(EasyState);
 
     impl TestPort<EasyState> for FakeTestPort {
-        fn send(&mut self, command: &str) -> Result<()> {
-            let command: Box<dyn Command<EasyState>> = match command {
-                "spawn" => Box::new(Spawn),
-                "sched" => Box::new(Sched),
-                "exit" => Box::new(Exit),
-                _ => return Err(Error::new(ErrorKind::CommandNotFound)),
-            };
-            command.execute(&mut self.0)
+        fn send(&mut self, command: &dyn Command<EasyState>) -> Result<()> {
+            command.execute(&mut self.0).map(|_| ())
         }
         fn receive(&mut self) -> Result<&EasyState> {
             let sta_str = serde_json::to_string(&self.0)

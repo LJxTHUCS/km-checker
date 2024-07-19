@@ -22,7 +22,7 @@ pub trait TestPort<S>
 where
     S: AbstractState,
 {
-    fn send(&mut self, command: &str) -> Result<()>;
+    fn send(&mut self, command: &dyn Command<S>) -> Result<()>;
     fn receive(&mut self) -> Result<&S>;
 }
 pub struct Runner<C, P, T, S>
@@ -53,7 +53,7 @@ where
             state,
         }
     }
-    
+
     /// Run a single step of model checking.
     ///
     /// 1. Get command from commander
@@ -65,8 +65,9 @@ where
     /// Returns `StateMismatch` if a discrepancy is found.
     pub fn step(&mut self) -> Result<()> {
         let command = self.commander.command()?;
+        self.printer.print_str(&command.stringify())?;
         // Send command to test port
-        self.test_port.send(&command.stringify())?;
+        self.test_port.send(command.as_ref())?;
         // Execute command in kernel model
         command.execute(&mut self.state)?;
         // Receive state from test port

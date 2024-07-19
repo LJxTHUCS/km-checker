@@ -4,6 +4,7 @@ pub enum ErrorKind {
     CommandNotFound,
     ExecutionFailed,
     StateMismatch,
+    InvalidInput,
     IOError,
 }
 
@@ -29,3 +30,13 @@ impl Error {
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
+
+#[macro_export]
+macro_rules! format_err {
+    ($kind:expr) => {
+        Error::new($kind)
+    };
+    ($kind:expr, $($arg:tt)*) => {
+        Error::with_message($kind, format!($($arg)*))
+    };
+}
