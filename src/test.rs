@@ -15,7 +15,7 @@ struct EasyState {
 struct Spawn;
 
 impl Command<EasyState> for Spawn {
-    fn execute(&self, state: &mut EasyState) -> Result<usize> {
+    fn execute(&self, state: &mut EasyState) -> ExecutionResult {
         state.tasks.0.push(state.control.0.next_task);
         state.control.0.next_task += 1;
         Ok(0)
@@ -28,7 +28,7 @@ impl Command<EasyState> for Spawn {
 struct Sched;
 
 impl Command<EasyState> for Sched {
-    fn execute(&self, state: &mut EasyState) -> Result<usize> {
+    fn execute(&self, state: &mut EasyState) -> ExecutionResult {
         let head = state.tasks.0[0];
         state.tasks.0.remove(0);
         state.tasks.0.push(head);
@@ -42,7 +42,7 @@ impl Command<EasyState> for Sched {
 struct Exit;
 
 impl Command<EasyState> for Exit {
-    fn execute(&self, state: &mut EasyState) -> Result<usize> {
+    fn execute(&self, state: &mut EasyState) -> ExecutionResult {
         state.tasks.0.pop();
         Ok(0)
     }
@@ -54,7 +54,7 @@ impl Command<EasyState> for Exit {
 struct RoundIn(usize);
 
 impl Commander<EasyState> for RoundIn {
-    fn command(&mut self) -> Result<Box<dyn Command<EasyState>>> {
+    fn command(&mut self) -> Result<Box<dyn Command<EasyState>>, Error> {
         let ops = vec![
             "spawn", "sched", "sched", "spawn", "sched", "exit", "sched", "spawn", "exit", "exit",
         ];
@@ -72,11 +72,11 @@ impl Commander<EasyState> for RoundIn {
 struct Stdout;
 
 impl Printer<EasyState> for Stdout {
-    fn print_str(&mut self, s: &str) -> Result<()> {
+    fn print_str(&mut self, s: &str) -> Result<(), Error> {
         println!("{}", s);
         Ok(())
     }
-    fn print_state(&mut self, s: &EasyState) -> Result<()> {
+    fn print_state(&mut self, s: &EasyState) -> Result<(), Error> {
         println!("{:?}", s);
         Ok(())
     }
@@ -85,13 +85,13 @@ impl Printer<EasyState> for Stdout {
 struct FakeTestPort(EasyState);
 
 impl TestPort<EasyState> for FakeTestPort {
-    fn send(&mut self, command: &dyn Command<EasyState>) -> Result<()> {
+    fn send(&mut self, command: &dyn Command<EasyState>) -> Result<(), Error> {
         command.execute(&mut self.0).map(|_| ())
     }
-    fn receive_state(&mut self) -> Result<&EasyState> {
+    fn receive_state(&mut self) -> Result<&EasyState, Error> {
         Ok(&self.0)
     }
-    fn receive_retv(&mut self) -> Result<usize> {
+    fn receive_retv(&mut self) -> ExecutionResult {
         Ok(0)
     }
 }

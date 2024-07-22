@@ -1,14 +1,11 @@
-use crate::{
-    error::{Error, Result},
-    AbstractState, Command,
-};
+use crate::{AbstractState, Command, Error, ExecutionResult};
 
 pub trait Commander<S>
 where
     S: AbstractState,
 {
     /// Get the next command to execute.
-    fn command(&mut self) -> Result<Box<dyn Command<S>>>;
+    fn command(&mut self) -> Result<Box<dyn Command<S>>, Error>;
 }
 
 pub trait Printer<S>
@@ -16,9 +13,9 @@ where
     S: AbstractState,
 {
     /// Print an info string to the output.
-    fn print_str(&mut self, s: &str) -> Result<()>;
+    fn print_str(&mut self, s: &str) -> Result<(), Error>;
     /// Print the current state.
-    fn print_state(&mut self, s: &S) -> Result<()>;
+    fn print_state(&mut self, s: &S) -> Result<(), Error>;
 }
 
 pub trait TestPort<S>
@@ -26,11 +23,11 @@ where
     S: AbstractState,
 {
     /// Send a command to the test target.
-    fn send(&mut self, command: &dyn Command<S>) -> Result<()>;
+    fn send(&mut self, command: &dyn Command<S>) -> Result<(), Error>;
     /// Receive the return value from the test target.
-    fn receive_retv(&mut self) -> Result<usize>;
+    fn receive_retv(&mut self) -> ExecutionResult;
     /// Receive current state from the test target.
-    fn receive_state(&mut self) -> Result<&S>;
+    fn receive_state(&mut self) -> Result<&S, Error>;
 }
 pub struct Runner<C, P, T, S>
 where
@@ -72,7 +69,7 @@ where
     ///
     /// `ReturnValueMismatch` if return value discrepancy is found.
     /// `StateMismatch` if state discrepancy is found.
-    pub fn step(&mut self, check_retv: bool, check_state: bool) -> Result<()> {
+    pub fn step(&mut self, check_retv: bool, check_state: bool) -> Result<(), Error> {
         // Get command from commander
         let command = self.commander.command()?;
         self.printer

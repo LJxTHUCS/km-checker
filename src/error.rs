@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Error {
     /// IO Error
     Io,
@@ -9,5 +9,3 @@ pub enum Error {
     /// Command execution failed (with i32 error code)
     ExecutionFail(i32),
 }
-
-pub type Result<T> = core::result::Result<T, Error>;
