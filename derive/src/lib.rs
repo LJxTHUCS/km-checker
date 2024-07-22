@@ -1,7 +1,7 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Data, Fields};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 #[proc_macro_derive(AbstractState)]
 pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
@@ -27,7 +27,7 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         }
                     }
                 }
-            },
+            }
             Fields::Unnamed(fields) => {
                 let matches_impl = fields.unnamed.iter().enumerate().map(|(i, _)| {
                     let index = syn::Index::from(i);
@@ -45,7 +45,7 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         }
                     }
                 }
-            },
+            }
             Fields::Unit => {
                 quote! {
                     impl AbstractState for #name {
@@ -54,7 +54,7 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         }
                     }
                 }
-            },
+            }
         },
         _ => unimplemented!(),
     };

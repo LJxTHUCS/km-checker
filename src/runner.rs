@@ -1,5 +1,5 @@
 use crate::{
-    error::{Error, ErrorKind, Result},
+    error::{Error, Result},
     AbstractState, Command,
 };
 
@@ -52,6 +52,7 @@ where
     T: TestPort<S>,
     S: AbstractState,
 {
+    /// Construct a test runner.
     pub fn new(commander: C, printer: P, test_port: T, state: S) -> Self {
         Self {
             commander,
@@ -76,33 +77,34 @@ where
         let command = self.commander.command()?;
         self.printer
             .print_str(&format!("[command]: {}", command.stringify()))?;
-
         // Send command to test port
         self.test_port.send(command.as_ref())?;
         // Execute command in kernel model
-        let model_ret = command.execute(&mut self.state)?;
+        let model_ret = command.execute(&mut self.state);
 
         // Check return value
         if check_retv {
-            let test_ret = self.test_port.receive_retv()?;
+            // Receive return value from test port
+            let test_ret = self.test_port.receive_retv();
             self.printer
-                .print_str(&format!("[test retv]: {}", test_ret))?;
+                .print_str(&format!("[test retv]: {:?}", test_ret))?;
             self.printer
-                .print_str(&format!("[model retv]: {}", model_ret))?;
+                .print_str(&format!("[model retv]: {:?}", model_ret))?;
             if test_ret != model_ret {
-                return Err(Error::new(ErrorKind::ReturnValueMismatch));
+                return Err(Error::ReturnValueMismatch);
             }
         }
 
         // Check state
         if check_state {
+            // Receive state from test port
             let test_state = self.test_port.receive_state()?;
             self.printer.print_str("[test state]: ")?;
             self.printer.print_state(test_state)?;
             self.printer.print_str("[model state]: ")?;
             self.printer.print_state(&self.state)?;
             if !test_state.matches(&self.state) {
-                return Err(Error::new(ErrorKind::StateMismatch));
+                return Err(Error::StateMismatch);
             }
         }
         Ok(())
