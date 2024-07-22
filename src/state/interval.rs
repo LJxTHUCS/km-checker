@@ -21,35 +21,20 @@ where
     }
 }
 
-// Associated value will not be checked for equality.
-impl<T> PartialEq for Interval<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.left == other.left && self.right == other.right
-    }
-}
-impl<T> Eq for Interval<T> {}
-
-impl<T> PartialOrd for Interval<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.left.partial_cmp(&other.left)
-    }
-}
-impl<T> Ord for Interval<T> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.left.cmp(&other.left)
-    }
-}
-
 impl<T> Interval<T> {
     pub fn new(left: usize, right: usize, value: T) -> Self {
         Self { left, right, value }
     }
+    /// Check if self contains a point
+    pub fn contains(&self, point: usize) -> bool {
+        self.left <= point && self.right > point
+    }
     /// Check if self overlaps with other.
     pub fn overlaps(&self, other: &Self) -> bool {
-        self.left < other.right && self.right > other.left
+        self.contains(other.left) || other.contains(self.left)
     }
-    /// Check if self contains other strictly.
-    pub fn contains(&self, other: &Self) -> bool {
+    /// Check if self covers other strictly.
+    pub fn covers(&self, other: &Self) -> bool {
         self.left < other.left && self.right > other.right
     }
     /// Get the intersection of self and other.
