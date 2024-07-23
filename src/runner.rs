@@ -2,6 +2,7 @@ use crate::{AbstractState, Command, Error, ExecutionResult};
 use alloc::boxed::Box;
 use alloc::format;
 
+/// Generate commands for both the abstract model and the target kernel.
 pub trait Commander<S>
 where
     S: AbstractState,
@@ -10,6 +11,7 @@ where
     fn command(&mut self) -> Result<Box<dyn Command<S>>, Error>;
 }
 
+/// Print test info to the output.
 pub trait Printer<S>
 where
     S: AbstractState,
@@ -20,6 +22,7 @@ where
     fn print_state(&mut self, s: &S) -> Result<(), Error>;
 }
 
+/// Communicate with the target kernel.
 pub trait TestPort<S>
 where
     S: AbstractState,
@@ -31,6 +34,8 @@ where
     /// Receive current state from the test target.
     fn receive_state(&mut self) -> Result<&S, Error>;
 }
+
+/// Model Checking Runner.
 pub struct Runner<C, P, T, S>
 where
     C: Commander<S>,

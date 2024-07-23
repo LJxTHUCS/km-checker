@@ -10,7 +10,7 @@ pub use ignored::*;
 pub use interval::*;
 pub use value::*;
 
-/// Common Kernel State Type. With matches function and serde support
+/// Generic Kernel State Type.
 pub trait AbstractState {
     fn matches(&self, other: &Self) -> bool;
 }
