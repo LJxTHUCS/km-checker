@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 mod ident;
 mod ignored;
 mod interval;

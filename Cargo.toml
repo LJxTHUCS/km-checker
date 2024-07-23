@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.204", features = ["derive"] }
-serde_json = "1.0.96"
-rand = "0.8.5"
 derive = { path = "derive", optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
 
 [features]
 default = ["derive"]

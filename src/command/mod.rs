@@ -1,4 +1,5 @@
 use crate::{state::AbstractState, Error};
+use alloc::string::String;
 
 pub type ExecutionResult = Result<usize, Error>;
 pub trait Command<T>

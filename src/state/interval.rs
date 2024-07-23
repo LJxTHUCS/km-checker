@@ -1,8 +1,9 @@
 use super::AbstractState;
-use serde::{Deserialize, Serialize};
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// A common interval type.
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Interval<T> {
     /// Left bound (inclusive).
     pub left: usize,

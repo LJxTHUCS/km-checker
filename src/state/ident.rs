@@ -1,9 +1,9 @@
 use super::AbstractState;
 use core::hash::Hash;
-use serde::{Deserialize, Serialize};
+use alloc::vec::Vec;
 
 /// Ordered List of Identifiers
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct IdentList<T>(pub Vec<T>)
 where
     T: Hash + Eq;
@@ -22,7 +22,7 @@ where
 }
 
 /// Unordered Set of Identifiers
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct IdentSet<T>(pub Vec<T>)
 where
     T: Hash + Eq;

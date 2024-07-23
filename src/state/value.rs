@@ -1,12 +1,10 @@
 use super::AbstractState;
-use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    ops::{Deref, DerefMut},
-};
+use alloc::collections::BTreeMap;
+use alloc::vec::Vec;
+use core::ops::{Deref, DerefMut};
 
 /// Single Value
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Value<T>(pub T);
 
 impl<T> AbstractState for Value<T>
@@ -31,7 +29,7 @@ impl<T> DerefMut for Value<T> {
 }
 
 /// Ordered List of Values
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ValueList<T>(pub Vec<T>);
 
 impl<'a, T> AbstractState for ValueList<T>
@@ -59,7 +57,7 @@ impl<T> DerefMut for ValueList<T> {
 }
 
 /// Unordered Set of Values
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct ValueSet<T>(pub Vec<T>);
 
 impl<'a, T> AbstractState for ValueSet<T>
@@ -87,7 +85,7 @@ impl<T> DerefMut for ValueSet<T> {
 }
 
 /// Map of Values
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct ValueMap<K, V>(pub BTreeMap<K, V>)
 where
     K: Ord;

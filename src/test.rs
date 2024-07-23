@@ -1,5 +1,12 @@
+extern crate std;
+
 use crate::*;
-use runner::{Commander, Printer, Runner};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec,
+};
+use std::println;
 
 #[derive(Debug, Default)]
 struct EasyControlInfo {
