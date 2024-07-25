@@ -6,6 +6,4 @@ pub enum Error {
     StateMismatch,
     /// Return value check failed
     ReturnValueMismatch,
-    /// Command execution failed (with i32 error code)
-    ExecutionFail(i32),
 }

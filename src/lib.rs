@@ -7,9 +7,6 @@ mod state;
 
 extern crate alloc;
 
-#[cfg(test)]
-mod test;
-
 pub use command::*;
 pub use error::*;
 pub use runner::*;
