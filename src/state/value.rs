@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 
 /// Single Value
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Value<T>(pub T);
 
 impl<T> AbstractState for Value<T>
@@ -29,7 +29,7 @@ impl<T> DerefMut for Value<T> {
 }
 
 /// Ordered List of Values
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ValueList<T>(pub Vec<T>);
 
 impl<'a, T> AbstractState for ValueList<T>
@@ -57,7 +57,7 @@ impl<T> DerefMut for ValueList<T> {
 }
 
 /// Unordered Set of Values
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ValueSet<T>(pub Vec<T>);
 
 impl<'a, T> AbstractState for ValueSet<T>
@@ -85,7 +85,7 @@ impl<T> DerefMut for ValueSet<T> {
 }
 
 /// Map of Values
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ValueMap<K, V>(pub BTreeMap<K, V>)
 where
     K: Ord;

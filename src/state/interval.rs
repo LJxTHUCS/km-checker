@@ -3,7 +3,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 /// A common interval type.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Interval<T> {
     /// Left bound (inclusive).
     pub left: usize,

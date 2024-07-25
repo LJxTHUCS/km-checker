@@ -2,7 +2,7 @@ use super::AbstractState;
 use core::ops::{Deref, DerefMut};
 
 /// Not Checked Fileds
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Ignored<T>(pub T);
 
 impl<T> AbstractState for Ignored<T> {
