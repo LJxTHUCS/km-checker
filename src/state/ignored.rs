@@ -9,6 +9,7 @@ impl<T> AbstractState for Ignored<T> {
     fn matches(&self, _other: &Self) -> bool {
         true
     }
+    fn update(&mut self, _other: &Self) {}
 }
 
 impl<T> Deref for Ignored<T> {

@@ -93,7 +93,7 @@ where
     ///
     /// 1. Get state from test port and update self.
     fn init(&mut self) -> Result<(), Error> {
-        self.state = self.test_port.get_state()?;
+        self.state.update(&self.test_port.get_state()?);
         self.printer.print_state(&self.state);
         Ok(())
     }
@@ -134,6 +134,7 @@ where
                 return Err(Error::StateMismatch);
             }
         }
+        self.state.update(&test_state);
         Ok(())
     }
 

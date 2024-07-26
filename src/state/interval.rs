@@ -20,6 +20,11 @@ where
     fn matches(&self, other: &Self) -> bool {
         self.left == other.left && self.right == other.right && self.value.matches(&other.value)
     }
+    fn update(&mut self, other: &Self) {
+        self.left = other.left;
+        self.right = other.right;
+        self.value.update(&other.value);
+    }
 }
 
 impl<T> Interval<T> {

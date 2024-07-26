@@ -19,11 +19,20 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         }
                     }
                 });
+                let update_impl = fields.named.iter().map(|f| {
+                    let field_name = &f.ident;
+                    quote! {
+                        self.#field_name.update(&other.#field_name);
+                    }
+                });
                 quote! {
                     impl AbstractState for #name {
                         fn matches(&self, other: &Self) -> bool {
                             #( #matches_impl )*
                             true
+                        }
+                        fn update(&mut self, other: &Self) { 
+                            #( #update_impl )* 
                         }
                     }
                 }
@@ -37,11 +46,20 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         }
                     }
                 });
+                let update_impl = fields.unnamed.iter().enumerate().map(|(i, _)| {
+                    let index = syn::Index::from(i);
+                    quote! {
+                        self.#index.update(&other.#index);
+                    }
+                });
                 quote! {
                     impl AbstractState for #name {
                         fn matches(&self, other: &Self) -> bool {
                             #( #matches_impl )*
                             true
+                        }
+                        fn update(&mut self, other: &Self) { 
+                            #( #update_impl )* 
                         }
                     }
                 }
@@ -52,6 +70,7 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                         fn matches(&self, other: &Self) -> bool {
                             true
                         }
+                        fn update(&mut self, _other: &Self) {}
                     }
                 }
             }
