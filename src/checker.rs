@@ -1,9 +1,8 @@
-use core::fmt::Debug;
-
 use crate::{AbstractState, Command, Error};
 use alloc::{boxed::Box, format};
+use core::fmt::Debug;
 
-/// Checking level (of retv and state).
+/// Check level (of retv and state).
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckLevel {
     /// No checking.
@@ -42,8 +41,8 @@ where
     fn get_state(&mut self) -> Result<S, Error>;
 }
 
-/// Model Checking Runner.
-pub struct Runner<C, P, T, S>
+/// Model Checker.
+pub struct Checker<C, P, T, S>
 where
     C: Commander<S>,
     P: Printer,
@@ -62,14 +61,14 @@ where
     retv: isize,
 }
 
-/// Runner execution steps.
+/// Checker execution steps.
 enum ExecutionStep {
     Init,
     Command,
     Check,
 }
 
-impl<C, P, T, S> Runner<C, P, T, S>
+impl<C, P, T, S> Checker<C, P, T, S>
 where
     C: Commander<S>,
     P: Printer,

@@ -3,18 +3,18 @@
 version = 3
 
 [[package]]
-name = "derive"
+name = "km-checker"
+version = "0.1.0"
+dependencies = [
+ "km-derive",
+]
+
+[[package]]
+name = "km-derive"
 version = "0.1.0"
 dependencies = [
  "quote",
  "syn",
-]
-
-[[package]]
-name = "kernel-model-lib"
-version = "0.1.0"
-dependencies = [
- "derive",
 ]
 
 [[package]]

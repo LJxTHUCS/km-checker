@@ -1,14 +1,14 @@
 [package]
-name = "kernel-model-lib"
+name = "km-checker"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-derive = { path = "derive", optional = true }
+km-derive = { path = "derive", optional = true }
 
 [features]
 default = ["derive"]
-derive = ["dep:derive"]
+derive = ["dep:km-derive"]
 
 [workspace]
 members = ["derive"]
