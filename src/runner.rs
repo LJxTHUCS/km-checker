@@ -1,3 +1,5 @@
+use core::fmt::Debug;
+
 use crate::{AbstractState, Command, Error};
 use alloc::{boxed::Box, format};
 
@@ -22,14 +24,9 @@ where
 }
 
 /// Print test info to the output.
-pub trait Printer<S>
-where
-    S: AbstractState,
-{
+pub trait Printer {
     /// Print an info string to the output.
-    fn print_str(&mut self, s: &str);
-    /// Print the current state.
-    fn print_state(&mut self, s: &S);
+    fn print(&mut self, s: &str);
 }
 
 /// Communicate with the target kernel.
@@ -49,14 +46,16 @@ where
 pub struct Runner<C, P, T, S>
 where
     C: Commander<S>,
-    P: Printer<S>,
+    P: Printer,
     T: TestPort<S>,
-    S: AbstractState,
+    S: AbstractState + Debug,
 {
     commander: C,
     printer: P,
     test_port: T,
     state: S,
+    /// Round counter.
+    round: usize,
     /// Current execution step.
     step: ExecutionStep,
     /// Return value of last command.
@@ -73,9 +72,9 @@ enum ExecutionStep {
 impl<C, P, T, S> Runner<C, P, T, S>
 where
     C: Commander<S>,
-    P: Printer<S>,
+    P: Printer,
     T: TestPort<S>,
-    S: AbstractState,
+    S: AbstractState + Debug,
 {
     /// Construct a test runner.
     pub fn new(commander: C, printer: P, test_port: T, state: S) -> Self {
@@ -84,6 +83,7 @@ where
             printer,
             test_port,
             state,
+            round: 0,
             step: ExecutionStep::Init,
             retv: 0,
         }
@@ -94,7 +94,8 @@ where
     /// 1. Get state from test port and update self.
     fn init(&mut self) -> Result<(), Error> {
         self.state.update(&self.test_port.get_state()?);
-        self.printer.print_state(&self.state);
+        self.printer.print("[ Initial State ]");
+        self.printer.print(&format!("{:?}", self.state));
         Ok(())
     }
 
@@ -104,7 +105,11 @@ where
     /// 2. Execute command on self state and record the return value.
     /// 3. Send command to test port.
     fn command(&mut self) -> Result<(), Error> {
+        self.printer
+            .print(&format!("\x1b[1;32m[ Round {} ]\x1b[0m", self.round));
+        self.round += 1;
         let command = self.commander.command()?;
+        self.printer.print(&format!("Command: {:?}", command));
         self.retv = command.execute(&mut self.state);
         self.test_port.send_command(command.as_ref())
     }
@@ -116,20 +121,20 @@ where
     fn check(&mut self, retv_level: CheckLevel, state_level: CheckLevel) -> Result<(), Error> {
         let test_retv = self.test_port.get_retv();
         if retv_level != CheckLevel::None && test_retv != self.retv {
-            self.printer.print_str("Return value mismatch");
+            self.printer.print("\x1b[1;31mReturn value mismatch\x1b[0m");
             self.printer
-                .print_str(&format!("expected: {}, got: {}", self.retv, test_retv));
+                .print(&format!("Expected: {}, Got: {}", self.retv, test_retv));
             if retv_level == CheckLevel::Strict {
                 return Err(Error::ReturnValueMismatch);
             }
         }
         let test_state = self.test_port.get_state()?;
         if state_level != CheckLevel::None && !test_state.matches(&self.state) {
-            self.printer.print_str("State mismatch");
-            self.printer.print_str("expected:");
-            self.printer.print_state(&test_state);
-            self.printer.print_str("got:");
-            self.printer.print_state(&self.state);
+            self.printer.print("\x1b[1;31mState mismatch\x1b[0m");
+            self.printer.print("Expected:");
+            self.printer.print(&format!("{:?}", test_state));
+            self.printer.print("Got:");
+            self.printer.print(&format!("{:?}", self.state));
             if state_level == CheckLevel::Strict {
                 return Err(Error::StateMismatch);
             }
