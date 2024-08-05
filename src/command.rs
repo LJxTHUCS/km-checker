@@ -12,11 +12,32 @@ where
     fn to_bytes(&self) -> Vec<u8>;
 }
 
-/// Wrap a foreign-defined command as a model command
-/// (command that can be executed on an abstract state) .
-/// Implement `Deref`, `From`, and `Debug` for it.
+/// Default `to_bytes` implementation for model commands. 
+/// This macro requires `km_command` as dependency.
 ///
-/// Format: `model_command!(module_name,command_name)`.
+/// Format: `impl_to_bytes!()`.
+#[macro_export]
+macro_rules! impl_to_bytes {
+    () => {
+        fn to_bytes(&self) -> Vec<u8> {
+            let mut res = km_command::id_to_bytes(Self::ID);
+            res.extend(self.0.to_bytes());
+            res
+        }
+    };
+}
+
+/// Wrap a foreign-defined (typically `km_command`) command as a model 
+/// command (command that can be executed on an abstract state) .
+/// Implement `Deref`, `From`, and `Debug` for it.
+/// 
+/// If `execute_fn` is provided, it will be used to implenment
+/// `Command` trait.
+///
+/// Format: 
+/// 
+/// - `model_command!(module_name, command_name)`.
+/// - `model_command!(module_name, command_name, state_name, { execute_fn })`.
 #[macro_export]
 macro_rules! model_command {
     ($($mod:ident)::*,$cmd:ident) => {
@@ -47,21 +68,36 @@ macro_rules! model_command {
             }
         }
     };
-}
+    ($($mod:ident)::*, $cmd:ident, $state:ident, $execute_fn:block) => {
+        model_command!($($mod)::*, $cmd);
 
-/// Default `to_bytes` implementation for model commands. This macro requires
-/// `km_command` as dependency.
-///
-/// Format: `impl_to_bytes!()`.
-#[macro_export]
-macro_rules! impl_to_bytes {
-    () => {
-        fn to_bytes(&self) -> Vec<u8> {
-            let mut res = km_command::id_to_bytes(Self::ID);
-            res.extend(self.0.to_bytes());
-            res
+        impl $crate::Command<$state> for $cmd {
+            fn execute(&self, state: &mut $state) -> isize {
+                /// `get!()` => `self`; `get!(field)` => `self.field`
+                #[allow(unused_macros)]
+                macro_rules! get {
+                    () => {
+                        self
+                    };
+                    ($field:ident) => {
+                        self.$field
+                    };
+                }
+                /// `state!()` => `state`; `state!(field)` => `state.field`
+                #[allow(unused_macros)]
+                macro_rules! state {
+                    () => {
+                        state
+                    };
+                    ($field:ident) => {
+                        state.$field
+                    };
+                }
+                $execute_fn
+            }
+            impl_to_bytes!();
         }
-    };
+    }
 }
 
 /// Generate commands for both the abstract model and the target kernel.
