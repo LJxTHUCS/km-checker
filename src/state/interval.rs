@@ -1,6 +1,4 @@
 use super::AbstractState;
-use alloc::vec;
-use alloc::vec::Vec;
 
 /// A common interval type.
 #[derive(Debug, Clone, Copy, Default)]
