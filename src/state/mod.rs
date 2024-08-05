@@ -2,10 +2,9 @@ mod ignored;
 mod interval;
 mod value;
 
-use crate::Error;
-pub use ignored::*;
-pub use interval::*;
-pub use value::*;
+pub use ignored::Ignored;
+pub use interval::Interval;
+pub use value::{Value, ValueList, ValueMap, ValueSet};
 
 /// Generic Kernel State Type.
 pub trait AbstractState {
@@ -29,6 +28,8 @@ macro_rules! impl_AbstractState {
 
 impl_AbstractState!(for u8, i8, u16, i16, u32, i32, u64, i64, u128,
     i128, usize, isize, f32, f64, bool, char, String, &str);
+
+use crate::Error;
 
 /// Get abstract state from target kernel.
 pub trait StateFetcher<S> {

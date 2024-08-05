@@ -1,7 +1,7 @@
 use super::AbstractState;
 use core::ops::{Deref, DerefMut};
 
-/// Not Checked Fileds
+/// Mark a field as not-checked and not-updated.
 #[derive(Debug, Clone, Default)]
 pub struct Ignored<T>(pub T);
 

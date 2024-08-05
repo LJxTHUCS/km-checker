@@ -2,7 +2,7 @@ use super::AbstractState;
 use core::ops::{Deref, DerefMut};
 use std::collections::BTreeMap;
 
-/// Single Value
+/// Type that is checked value-by-value.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Value<T>(pub T);
 
@@ -30,7 +30,7 @@ impl<T> DerefMut for Value<T> {
     }
 }
 
-/// Ordered List of Values
+/// Ordered list of values that are checked value-by-value.
 #[derive(Debug, Clone, Default)]
 pub struct ValueList<T>(pub Vec<T>);
 
@@ -61,7 +61,7 @@ impl<T> DerefMut for ValueList<T> {
     }
 }
 
-/// Unordered Set of Values
+/// Unordered set of values that are checked value-by-value.
 #[derive(Debug, Default)]
 pub struct ValueSet<T>(pub Vec<T>);
 
@@ -92,7 +92,7 @@ impl<T> DerefMut for ValueSet<T> {
     }
 }
 
-/// Map of Values
+/// Map of values. Keys are checked by equality.
 #[derive(Debug, Default)]
 pub struct ValueMap<K, V>(pub BTreeMap<K, V>)
 where
