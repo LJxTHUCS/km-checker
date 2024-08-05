@@ -5,10 +5,14 @@ edition = "2021"
 
 [dependencies]
 km-derive = { path = "derive", optional = true }
+libafl_qemu = { git = "https://github.com/nine-point-eight-p/LibAFL", branch = "libafl_qemu_riscv", features = [
+    "riscv64",
+    "systemmode",
+], optional = true } # TODO: Replace when RISCV is supported in original repo
 
 [features]
-default = ["derive"]
 derive = ["dep:km-derive"]
+qemu = ["dep:libafl_qemu"]
 
 [workspace]
 members = ["derive"]
