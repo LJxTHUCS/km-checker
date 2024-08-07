@@ -40,38 +40,38 @@ macro_rules! impl_to_bytes {
 /// - `model_command!(module_name, command_name, state_name, { execute_fn })`.
 #[macro_export]
 macro_rules! model_command {
-    ($($mod:ident)::*,$cmd:ident) => {
-        pub struct $cmd(pub $($mod)::*::$cmd);
+    ($($mod:ident)::*,$cmd:ident$(<$lt:lifetime>)?) => {
+        pub struct $cmd$(<$lt>)?(pub $($mod)::*::$cmd$(<$lt>)?);
 
-        impl $cmd {
+        impl$(<$lt>)? $cmd$(<$lt>)? {
             /// Command id.
             pub const ID: usize = $($mod)::*::$cmd::ID;
         }
 
-        impl core::ops::Deref for $cmd {
-            type Target = $($mod)::*::$cmd;
+        impl$(<$lt>)? core::ops::Deref for $cmd$(<$lt>)? {
+            type Target = $($mod)::*::$cmd$(<$lt>)?;
 
             fn deref(&self) -> &Self::Target {
                 &self.0
             }
         }
 
-        impl From<$($mod)::*::$cmd> for $cmd {
-            fn from(cmd: $($mod)::*::$cmd) -> Self {
+        impl$(<$lt>)? From<$($mod)::*::$cmd$(<$lt>)?> for $cmd$(<$lt>)? {
+            fn from(cmd: $($mod)::*::$cmd$(<$lt>)?) -> Self {
                 Self(cmd)
             }
         }
 
-        impl core::fmt::Debug for $cmd {
+        impl$(<$lt>)? core::fmt::Debug for $cmd$(<$lt>)? {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 self.0.fmt(f)
             }
         }
     };
-    ($($mod:ident)::*, $cmd:ident, $state:ident, $execute_fn:block) => {
-        model_command!($($mod)::*, $cmd);
+    ($($mod:ident)::*, $cmd:ident$(<$lt:lifetime>)?, $state:ident, $execute_fn:block) => {
+        model_command!($($mod)::*, $cmd$(<$lt>)?);
 
-        impl $crate::Command<$state> for $cmd {
+        impl$(<$lt>)? $crate::Command<$state> for $cmd$(<$lt>)? {
             fn execute(&self, state: &mut $state) -> isize {
                 /// `get!()` => `self`; `get!(field)` => `self.field`
                 #[allow(unused_macros)]
@@ -95,7 +95,7 @@ macro_rules! model_command {
                 }
                 $execute_fn
             }
-            impl_to_bytes!();
+            $crate::impl_to_bytes!();
         }
     }
 }

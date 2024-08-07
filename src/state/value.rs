@@ -62,7 +62,7 @@ impl<T> DerefMut for ValueList<T> {
 }
 
 /// Unordered set of values that are checked value-by-value.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ValueSet<T>(pub Vec<T>);
 
 impl<'a, T> AbstractState for ValueSet<T>
@@ -93,7 +93,7 @@ impl<T> DerefMut for ValueSet<T> {
 }
 
 /// Map of values. Keys are checked by equality.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ValueMap<K, V>(pub BTreeMap<K, V>)
 where
     K: Ord;
