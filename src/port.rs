@@ -1,4 +1,5 @@
 use crate::{AbstractState, Command, Error, ReadTargetMem, WriteTargetMem};
+use std::{cell::RefCell, rc::Rc};
 
 /// Communicate with the target kernel: send command and receive result.
 pub trait TestPort<S>
@@ -13,17 +14,15 @@ where
 
 /// Simple test port that writes command to and reads result from
 /// target's virtual memory.
-pub struct MemTestPort<S, R, W> {
+pub struct MemTestPort<R, W> {
     reader: R,
     writer: W,
     read_addr: usize,
     write_addr: usize,
-    _state: std::marker::PhantomData<S>,
 }
 
-impl<S, R, W> MemTestPort<S, R, W>
+impl<R, W> MemTestPort<R, W>
 where
-    S: AbstractState,
     R: ReadTargetMem,
     W: WriteTargetMem,
 {
@@ -33,12 +32,11 @@ where
             writer,
             read_addr,
             write_addr,
-            _state: std::marker::PhantomData,
         }
     }
 }
 
-impl<S, R, W> TestPort<S> for MemTestPort<S, R, W>
+impl<S, R, W> TestPort<S> for MemTestPort<R, W>
 where
     S: AbstractState,
     R: ReadTargetMem,
@@ -54,5 +52,31 @@ where
         self.reader.read_virt(self.read_addr, &mut buf);
         let retv = u64::from_le_bytes(buf) as isize;
         retv
+    }
+}
+
+/// Fake test port that uses another state to emulate the test target.
+pub struct FakeTestPort<S> {
+    state: Rc<RefCell<S>>,
+    result: isize,
+}
+
+impl<S> FakeTestPort<S> {
+    /// Create a new fake test port.
+    pub fn new(state: Rc<RefCell<S>>) -> Self {
+        Self { state, result: 0 }
+    }
+}
+
+impl<S> TestPort<S> for FakeTestPort<S>
+where
+    S: AbstractState,
+{
+    fn send_command(&mut self, command: &dyn Command<S>) -> Result<(), Error> {
+        self.result = command.execute(&mut self.state.borrow_mut());
+        Ok(())
+    }
+    fn get_result(&mut self) -> isize {
+        self.result
     }
 }
