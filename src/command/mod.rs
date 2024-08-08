@@ -1,4 +1,7 @@
-use crate::{AbstractState, Error};
+mod commander;
+
+use crate::AbstractState;
+pub use commander::Commander;
 use core::fmt::Debug;
 
 /// A command that can be executed on a state.
@@ -12,7 +15,7 @@ where
     fn to_bytes(&self) -> Vec<u8>;
 }
 
-/// Default `to_bytes` implementation for model commands. 
+/// Default `to_bytes` implementation for model commands.
 /// This macro requires `km_command` as dependency.
 ///
 /// Format: `impl_to_bytes!()`.
@@ -27,15 +30,15 @@ macro_rules! impl_to_bytes {
     };
 }
 
-/// Wrap a foreign-defined (typically `km_command`) command as a model 
+/// Wrap a foreign-defined (typically `km_command`) command as a model
 /// command (command that can be executed on an abstract state) .
 /// Implement `Deref`, `From`, and `Debug` for it.
-/// 
+///
 /// If `execute_fn` is provided, it will be used to implenment
 /// `Command` trait.
 ///
-/// Format: 
-/// 
+/// Format:
+///
 /// - `model_command!(module_name, command_name)`.
 /// - `model_command!(module_name, command_name, state_name, { execute_fn })`.
 #[macro_export]
@@ -98,13 +101,4 @@ macro_rules! model_command {
             $crate::impl_to_bytes!();
         }
     }
-}
-
-/// Generate commands for both the abstract model and the target kernel.
-pub trait Commander<S>
-where
-    S: AbstractState,
-{
-    /// Get the next command to execute.
-    fn command(&mut self) -> Result<Box<dyn Command<S>>, Error>;
 }

@@ -31,8 +31,8 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                             #( #matches_impl )*
                             true
                         }
-                        fn update(&mut self, other: &Self) { 
-                            #( #update_impl )* 
+                        fn update(&mut self, other: &Self) {
+                            #( #update_impl )*
                         }
                     }
                 }
@@ -58,8 +58,8 @@ pub fn derive_abstract_state(input: TokenStream) -> TokenStream {
                             #( #matches_impl )*
                             true
                         }
-                        fn update(&mut self, other: &Self) { 
-                            #( #update_impl )* 
+                        fn update(&mut self, other: &Self) {
+                            #( #update_impl )*
                         }
                     }
                 }
