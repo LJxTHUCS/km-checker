@@ -1,9 +1,7 @@
-mod fetcher;
 mod ignored;
 mod interval;
 mod value;
 
-pub use fetcher::{FakeStateFetcher, StateFetcher};
 pub use ignored::Ignored;
 pub use interval::Interval;
 pub use value::{Value, ValueList, ValueMap, ValueSet};
