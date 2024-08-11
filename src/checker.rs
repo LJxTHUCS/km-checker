@@ -1,4 +1,4 @@
-use crate::{AbstractState, Commander, Error, Printer, StateFetcher, TestPort};
+use crate::{port::TestPort, AbstractState, Commander, Error, Printer};
 use core::fmt::Debug;
 
 /// Check level (of retv and state).
@@ -12,53 +12,65 @@ pub enum CheckLevel {
     Strict,
 }
 
+/// Checker execution steps.
+enum CheckStep {
+    /// Start of execution.
+    Start,
+    /// Initialize model.
+    Init,
+    /// Commander send command to both model and target.
+    Command,
+    /// Checker check retv.
+    CheckRetv,
+    /// Get state from target.
+    GetState,
+    /// Checker check state.
+    CheckState,
+}
+
 /// Model Checker.
-pub struct Checker<C, T, F, P, S>
+pub struct Checker<C, T, P, S>
 where
     C: Commander<S>,
     T: TestPort<S>,
-    F: StateFetcher<S>,
     P: Printer,
     S: AbstractState + Debug,
 {
+    /// Generator of commands.
     commander: C,
+    /// Port to comunicate with target.
     port: T,
-    fetcher: F,
+    /// Info printer.
     printer: P,
+    /// Abstract state of model.
     state: S,
+    /// Init flag.
+    init: bool,
     /// Round counter.
     round: usize,
     /// Current execution step.
-    step: ExecutionStep,
+    step: CheckStep,
     /// Return value of last command.
     retv: isize,
 }
 
-/// Checker execution steps.
-enum ExecutionStep {
-    Init,
-    Command,
-    Check,
-}
-
-impl<C, T, F, P, S> Checker<C, T, F, P, S>
+impl<C, T, P, S> Checker<C, T, P, S>
 where
     C: Commander<S>,
     T: TestPort<S>,
-    F: StateFetcher<S>,
     P: Printer,
     S: AbstractState + Debug,
 {
     /// Construct a test runner.
-    pub fn new(commander: C, port: T, fetcher: F, printer: P, state: S) -> Self {
+    pub fn new(commander: C, port: T, printer: P, state: S) -> Self {
         Self {
             commander,
             port,
-            fetcher,
             printer,
             state,
+            init: false,
             round: 0,
-            step: ExecutionStep::Init,
+            step: CheckStep::Start,
             retv: 0,
         }
     }
@@ -67,7 +79,8 @@ where
     ///
     /// 1. Get state from test port and update self.
     fn init(&mut self) -> Result<(), Error> {
-        self.state.update(&self.fetcher.get_state()?);
+        let init_state = self.port.finish_state_retrieval()?;
+        self.state.update(&init_state);
         self.printer.print("[ Initial State ]");
         self.printer.print(&format!("{:?}", self.state));
         Ok(())
@@ -88,12 +101,9 @@ where
         self.port.send_command(command.as_ref())
     }
 
-    /// Action on Check step.
-    ///
-    /// 1. Get return value from test port and compare with self.
-    /// 2. Get state from test port and compare with self.
-    fn check(&mut self, retv_level: CheckLevel, state_level: CheckLevel) -> Result<(), Error> {
-        let test_retv = self.port.get_result();
+    /// Get return value of the comamnd from test target and compare with model.
+    fn check_retv(&mut self, retv_level: CheckLevel) -> Result<(), Error> {
+        let test_retv = self.port.receive_retv();
         self.printer.print(&format!(
             "Expected: {:#x}, Got: {:#x}",
             self.retv, test_retv
@@ -104,7 +114,12 @@ where
                 return Err(Error::ReturnValueMismatch);
             }
         }
-        let test_state = self.fetcher.get_state()?;
+        Ok(())
+    }
+
+    /// Get state from test target and compare with model.
+    fn check_state(&mut self, state_level: CheckLevel) -> Result<(), Error> {
+        let test_state = self.port.finish_state_retrieval()?;
         if state_level != CheckLevel::None && !test_state.matches(&self.state) {
             self.printer.print("\x1b[1;31mState mismatch\x1b[0m");
             self.printer.print("Expected:");
@@ -115,26 +130,46 @@ where
                 return Err(Error::StateMismatch);
             }
         }
-        // self.state.update(&test_state);
         Ok(())
     }
 
-    /// Common checker test step.
+    /// Common checker test step. Check step is updated as follows:
     ///
-    /// Init -> Command -> Check -> Command -> Check -> ...
+    /// Start -> Init* -> Command -> CheckRetv -> GetState* -> CheckState -> Command -> ...
     pub fn step(&mut self, retv_level: CheckLevel, state_level: CheckLevel) -> Result<(), Error> {
         match self.step {
-            ExecutionStep::Init => {
+            CheckStep::Start => {
+                self.port.start_state_retrieval()?;
+                self.step = CheckStep::GetState;
+            }
+            CheckStep::Init => {
                 self.init()?;
-                self.step = ExecutionStep::Command;
+                self.step = CheckStep::Command;
             }
-            ExecutionStep::Command => {
+            CheckStep::Command => {
                 self.command()?;
-                self.step = ExecutionStep::Check;
+                self.step = CheckStep::CheckRetv;
             }
-            ExecutionStep::Check => {
-                self.check(retv_level, state_level)?;
-                self.step = ExecutionStep::Command;
+            CheckStep::CheckRetv => {
+                self.check_retv(retv_level)?;
+                self.port.start_state_retrieval()?;
+                self.step = CheckStep::GetState;
+            }
+            CheckStep::GetState => {
+                let finished = self.port.retrieve_state_data()?;
+                self.step = if finished {
+                    if self.init {
+                        CheckStep::CheckState
+                    } else {
+                        CheckStep::Init
+                    }
+                } else {
+                    CheckStep::GetState
+                };
+            }
+            CheckStep::CheckState => {
+                self.check_state(state_level)?;
+                self.step = CheckStep::Command;
             }
         }
         Ok(())
