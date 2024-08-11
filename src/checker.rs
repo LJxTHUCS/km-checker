@@ -82,7 +82,7 @@ where
         self.printer
             .print(&format!("\x1b[1;32m[ Round {} ]\x1b[0m", self.round));
         self.round += 1;
-        let command = self.commander.command()?;
+        let command = self.commander.command(&self.state)?;
         self.printer.print(&format!("Command: {:?}", command));
         self.retv = command.execute(&mut self.state);
         self.port.send_command(command.as_ref())
@@ -138,5 +138,10 @@ where
             }
         }
         Ok(())
+    }
+
+    /// Get a reference to the state.
+    pub fn state(&self) -> &S {
+        &self.state
     }
 }

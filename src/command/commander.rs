@@ -7,5 +7,5 @@ where
     S: AbstractState,
 {
     /// Get the next command to execute.
-    fn command(&mut self) -> Result<Box<dyn Command<S>>, Error>;
+    fn command(&mut self, state: &S) -> Result<Box<dyn Command<S>>, Error>;
 }
