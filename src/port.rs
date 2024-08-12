@@ -26,15 +26,32 @@ where
     S: AbstractState,
 {
     /// Start the process of state retrieval.
+    ///
+    /// # Note
+    ///
+    /// If you are using `km-harness`, a command must be sent in this function.
+    /// If you want to do nothing in this function, you can send a `NOP` command.
     fn start_state_retrieval(&mut self) -> Result<(), Error>;
 
     /// Fetch state data from the test target.
     ///
-    /// Return `Ok(false)` if there is more data to fetch.
-    /// Return `Ok(true)` if all data has been fetched.
+    /// # Return
+    ///
+    /// - `Ok(false)` if there is more data to fetch.
+    /// - `Ok(true)` if all data has been fetched.
+    ///
+    /// # Note
+    ///
+    /// If you are using `km-harness`, a command must be sent in this function.
+    /// If you want to do nothing in this function, you can send a `NOP` command.
     fn retrieve_state_data(&mut self) -> Result<bool, Error>;
 
     /// Complete the state retrieval process and return the entire state.
+    ///
+    /// # Note
+    ///
+    /// If you are using `km-harness`, a command must be sent in this function.
+    /// If you want to do nothing in this function, you can send a `NOP` command.
     fn finish_state_retrieval(&mut self) -> Result<S, Error>;
 }
 
@@ -98,7 +115,7 @@ pub struct MemCommandChannel<R, W> {
     cmd_addr: usize,
     retv_addr: usize,
     /// Extra data.
-    data_addr: Option<usize>,
+    data_addr: usize,
 }
 
 impl<R, W> MemCommandChannel<R, W>
@@ -106,13 +123,7 @@ where
     R: ReadTargetMem,
     W: WriteTargetMem,
 {
-    pub fn new(
-        reader: R,
-        writer: W,
-        cmd_addr: usize,
-        retv_addr: usize,
-        data_addr: Option<usize>,
-    ) -> Self {
+    pub fn new(reader: R, writer: W, cmd_addr: usize, retv_addr: usize, data_addr: usize) -> Self {
         Self {
             reader,
             writer,
@@ -142,9 +153,7 @@ where
     }
     fn receive_extra_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
         let mut buf = vec![0u8; len];
-        if let Some(data_addr) = self.data_addr {
-            self.reader.read_virt(data_addr, &mut buf);
-        }
+        self.reader.read_virt(self.data_addr, &mut buf);
         Ok(buf)
     }
 }
