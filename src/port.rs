@@ -11,11 +11,11 @@ where
     /// Receive return value from the test target.
     fn receive_retv(&mut self) -> isize;
 
-    /// Receive other additional data from the test target.
-    /// 
-    /// Some commands may return additional data, such as some specific structure. Like
-    /// `fstat` returns a `stat` structure, or `getdents` returns a list of directory entries.
-    fn receive_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    /// (optional) Receive some extra data from the test target.
+    ///
+    /// Some commands may return extra data, such as some specific structs. Like `fstat`
+    /// returns a `stat` structure, or `getdents` returns a list of directory entries.
+    fn receive_extra_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
         Ok(vec![0u8; len])
     }
 }
@@ -95,9 +95,10 @@ impl<S> TestPort<S> for MockTestPort<S> where S: AbstractState + Clone {}
 pub struct MemCommandChannel<R, W> {
     reader: R,
     writer: W,
-    read_addr: usize,
-    write_addr: usize,
-    data_addr: Option<usize>
+    cmd_addr: usize,
+    retv_addr: usize,
+    /// Extra data.
+    data_addr: Option<usize>,
 }
 
 impl<R, W> MemCommandChannel<R, W>
@@ -105,12 +106,18 @@ where
     R: ReadTargetMem,
     W: WriteTargetMem,
 {
-    pub fn new(reader: R, writer: W, read_addr: usize, write_addr: usize, data_addr: Option<usize>) -> Self {
+    pub fn new(
+        reader: R,
+        writer: W,
+        cmd_addr: usize,
+        retv_addr: usize,
+        data_addr: Option<usize>,
+    ) -> Self {
         Self {
             reader,
             writer,
-            read_addr,
-            write_addr,
+            cmd_addr,
+            retv_addr,
             data_addr,
         }
     }
@@ -124,16 +131,16 @@ where
 {
     fn send_command(&mut self, command: &dyn Command<S>) -> Result<(), Error> {
         let buf = command.to_bytes();
-        self.writer.write_virt(self.write_addr, &buf);
+        self.writer.write_virt(self.retv_addr, &buf);
         Ok(())
     }
     fn receive_retv(&mut self) -> isize {
         let mut buf = [0u8; 8];
-        self.reader.read_virt(self.read_addr, &mut buf);
+        self.reader.read_virt(self.cmd_addr, &mut buf);
         let retv = u64::from_le_bytes(buf) as isize;
         retv
     }
-    fn receive_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+    fn receive_extra_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
         let mut buf = vec![0u8; len];
         if let Some(data_addr) = self.data_addr {
             self.reader.read_virt(data_addr, &mut buf);
