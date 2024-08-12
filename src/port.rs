@@ -10,6 +10,14 @@ where
 
     /// Receive return value from the test target.
     fn receive_retv(&mut self) -> isize;
+
+    /// Receive other additional data from the test target.
+    /// 
+    /// Some commands may return additional data, such as some specific structure. Like
+    /// `fstat` returns a `stat` structure, or `getdents` returns a list of directory entries.
+    fn receive_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+        Ok(vec![0u8; len])
+    }
 }
 
 /// Trait for retrieving and managing the state of a test target.
@@ -89,6 +97,7 @@ pub struct MemCommandChannel<R, W> {
     writer: W,
     read_addr: usize,
     write_addr: usize,
+    data_addr: Option<usize>
 }
 
 impl<R, W> MemCommandChannel<R, W>
@@ -96,12 +105,13 @@ where
     R: ReadTargetMem,
     W: WriteTargetMem,
 {
-    pub fn new(reader: R, writer: W, read_addr: usize, write_addr: usize) -> Self {
+    pub fn new(reader: R, writer: W, read_addr: usize, write_addr: usize, data_addr: Option<usize>) -> Self {
         Self {
             reader,
             writer,
             read_addr,
             write_addr,
+            data_addr,
         }
     }
 }
@@ -122,5 +132,12 @@ where
         self.reader.read_virt(self.read_addr, &mut buf);
         let retv = u64::from_le_bytes(buf) as isize;
         retv
+    }
+    fn receive_data(&mut self, len: usize) -> Result<Vec<u8>, Error> {
+        let mut buf = vec![0u8; len];
+        if let Some(data_addr) = self.data_addr {
+            self.reader.read_virt(data_addr, &mut buf);
+        }
+        Ok(buf)
     }
 }
