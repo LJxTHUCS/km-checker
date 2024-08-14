@@ -142,12 +142,12 @@ where
 {
     fn send_command(&mut self, command: &dyn Command<S>) -> Result<(), Error> {
         let buf = command.to_bytes();
-        self.writer.write_virt(self.retv_addr, &buf);
+        self.writer.write_virt(self.cmd_addr, &buf);
         Ok(())
     }
     fn receive_retv(&mut self) -> isize {
         let mut buf = [0u8; 8];
-        self.reader.read_virt(self.cmd_addr, &mut buf);
+        self.reader.read_virt(self.retv_addr, &mut buf);
         let retv = u64::from_le_bytes(buf) as isize;
         retv
     }

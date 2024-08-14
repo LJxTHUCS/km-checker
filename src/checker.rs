@@ -114,6 +114,8 @@ where
                 ));
                 if retv_level != CheckLevel::None && test_retv != self.retv {
                     self.printer.print("\x1b[1;31mReturn value mismatch\x1b[0m");
+                    self.printer.print("State:");
+                    self.printer.print(&format!("{:?}", self.state));
                     if retv_level == CheckLevel::Strict {
                         return Err(Error::ReturnValueMismatch);
                     }
